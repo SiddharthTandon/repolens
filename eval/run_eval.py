@@ -74,7 +74,7 @@ def main() -> None:
     if args.misses:
         best = "hybrid" if "hybrid" in results else "lexical"
         print(f"\nnot in the top 5 ({best}):")
-        for q, rank in zip(questions, results[best]):
+        for q, rank in zip(questions, results[best], strict=True):
             if not rank or rank > 5:
                 print(f"  rank {rank or '>10'}: {q['question']}")
     store.close()

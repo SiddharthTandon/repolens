@@ -7,7 +7,7 @@ name = "repolens"
 version = "0.1.0"
 description = "Ask questions about any codebase and get answers with checked file and line citations."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Siddharth Tandon" }]
 keywords = ["rag", "llm", "code-search", "embeddings", "bm25", "developer-tools"]
@@ -39,7 +39,7 @@ packages = ["repolens"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
