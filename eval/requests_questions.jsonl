@@ -1,0 +1,30 @@
+{"question": "Where is the Authorization header dropped when a redirect goes to a different host?", "files": ["src/requests/sessions.py"]}
+{"question": "How are proxy settings picked up from environment variables?", "files": ["src/requests/utils.py", "src/requests/sessions.py"]}
+{"question": "Which class implements a dictionary with case-insensitive keys for headers?", "files": ["src/requests/structures.py"]}
+{"question": "How does digest authentication build the response hash?", "files": ["src/requests/auth.py"]}
+{"question": "Where is the default User-Agent string created?", "files": ["src/requests/utils.py"]}
+{"question": "How is a JSON body serialized when a request is prepared?", "files": ["src/requests/models.py"]}
+{"question": "Where are cookies from a response stored into the cookie jar?", "files": ["src/requests/cookies.py"]}
+{"question": "How does the library guess the text encoding of a response?", "files": ["src/requests/models.py", "src/requests/utils.py"]}
+{"question": "How does downloading a response body in chunks work?", "files": ["src/requests/models.py"]}
+{"question": "Where is the mapping from status code numbers to names like ok or not_found?", "files": ["src/requests/status_codes.py"]}
+{"question": "How are event hooks such as response callbacks dispatched?", "files": ["src/requests/hooks.py"]}
+{"question": "How is the connect and read timeout passed down to urllib3?", "files": ["src/requests/adapters.py"]}
+{"question": "Where is TLS certificate verification and the CA bundle configured?", "files": ["src/requests/adapters.py", "src/requests/certs.py"]}
+{"question": "What raises an error for 4xx and 5xx responses?", "files": ["src/requests/models.py"]}
+{"question": "How are query parameters encoded into the URL?", "files": ["src/requests/models.py"]}
+{"question": "Where are credentials read from a .netrc file?", "files": ["src/requests/utils.py"]}
+{"question": "How is the value of the basic auth header built?", "files": ["src/requests/auth.py"]}
+{"question": "How does a session merge its own settings with per-request arguments?", "files": ["src/requests/sessions.py"]}
+{"question": "Which exception is raised when connecting to the server times out?", "files": ["src/requests/exceptions.py"]}
+{"question": "Where are the module-level shortcuts like get and post defined?", "files": ["src/requests/api.py"]}
+{"question": "How are files encoded for a multipart form upload?", "files": ["src/requests/models.py"]}
+{"question": "How are proxies recomputed after following a redirect?", "files": ["src/requests/sessions.py"]}
+{"question": "Where does the library check that the installed urllib3 and chardet versions are supported?", "files": ["src/requests/__init__.py"]}
+{"question": "What collects system and dependency versions for bug reports?", "files": ["src/requests/help.py"]}
+{"question": "How does the HTTP adapter set up its connection pool size?", "files": ["src/requests/adapters.py"]}
+{"question": "How is the maximum number of redirects enforced?", "files": ["src/requests/sessions.py"]}
+{"question": "How are links in the Link response header parsed?", "files": ["src/requests/utils.py", "src/requests/models.py"]}
+{"question": "What happens when a URL has no scheme like http or https?", "files": ["src/requests/models.py"]}
+{"question": "Where is the cookie jar that can be pickled and shared across threads implemented?", "files": ["src/requests/cookies.py"]}
+{"question": "How does a session decide to switch the method to GET after a 303 redirect?", "files": ["src/requests/sessions.py"]}
