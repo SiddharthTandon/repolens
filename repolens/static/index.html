@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>repolens</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e3e0;
+    --accent: #2f6fed; --ok: #1a7f37; --bad: #c62828; --code: #f2f2ef;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #131315; --panel: #1c1c1f; --text: #ececee; --muted: #9a9aa2;
+            --line: #2c2c31; --accent: #6ea1ff; --ok: #4cc06a; --bad: #ff6b6b; --code: #232327; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 64px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  #stats { color: var(--muted); font-size: 13px; }
+  form { margin: 18px 0 8px; display: grid; gap: 10px; }
+  textarea { width: 100%; min-height: 76px; resize: vertical; padding: 12px 14px; border-radius: 10px;
+             border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row label { color: var(--muted); font-size: 13px; }
+  select, input[type=text] { background: var(--panel); color: var(--text); border: 1px solid var(--line);
+             border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 13px; }
+  button { border: 0; border-radius: 8px; padding: 8px 16px; font: inherit; font-weight: 600;
+           cursor: pointer; background: var(--accent); color: white; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .55; cursor: progress; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 16px 18px; margin-top: 16px; }
+  .answer p { margin: .5em 0; }
+  .answer code { font-family: var(--mono); font-size: 13px; background: var(--code);
+                 padding: 1px 5px; border-radius: 5px; }
+  pre { margin: 0; overflow-x: auto; font: 12.5px/1.5 var(--mono); background: var(--code);
+        border-radius: 8px; padding: 10px 12px; }
+  .cite { font: 12px var(--mono); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px;
+          background: transparent; color: var(--accent); cursor: pointer; font-weight: 500; }
+  .cite.bad { color: var(--bad); text-decoration: line-through; cursor: help; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+       margin: 28px 0 0; }
+  .hit-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+              font-size: 13px; margin-bottom: 8px; }
+  .loc { font-family: var(--mono); }
+  .sym { color: var(--muted); }
+  .ln { color: var(--muted); user-select: none; display: inline-block; min-width: 3.2em; }
+  .flash { outline: 2px solid var(--accent); }
+  .error { color: var(--bad); }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>repolens</h1>
+    <span id="stats">loading index…</span>
+  </header>
+
+  <form id="form">
+    <textarea id="question" placeholder="Ask about this codebase, e.g. Where are retries configured and how is the backoff computed?" required></textarea>
+    <div class="row">
+      <button id="ask" type="submit">Ask</button>
+      <button id="search" type="button" class="secondary">Search only</button>
+      <label>mode <select id="mode"><option>hybrid</option><option>lexical</option><option>dense</option></select></label>
+      <label>chunks <select id="k"><option>5</option><option selected>8</option><option>12</option></select></label>
+      <label>paths <input id="filter" type="text" placeholder="e.g. src/*.py" size="14"></label>
+    </div>
+  </form>
+
+  <div id="out"></div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function loadStats() {
+  try {
+    const s = await (await fetch("/api/stats")).json();
+    $("stats").textContent = `${s.root} · ${s.files} files · ${s.chunks} chunks · ` +
+      `${s.embedder === "none" ? "keyword search" : s.embedder} · ${s.model}`;
+  } catch { $("stats").textContent = "index unavailable"; }
+}
+
+function renderMarkdown(text, citations) {
+  const status = new Map(citations.map((c) => [`${c.path}:${c.start}-${c.end}`, c.supported]));
+  const parts = text.split(/```[\w-]*\n?([\s\S]*?)```/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) return `<pre>${esc(part)}</pre>`;
+    let html = esc(part)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\[([^\[\]\s]+?):(\d+)(?:\s*-\s*(\d+))?\]/g, (m, path, a, b) => {
+        const key = `${path}:${a}-${b || a}`;
+        const ok = status.get(key) !== false;
+        return ok
+          ? `<button class="cite" data-path="${path}" data-line="${a}">${path}:${a}${b ? "-" + b : ""}</button>`
+          : `<button class="cite bad" title="not in the code the model was shown">${path}:${a}${b ? "-" + b : ""}</button>`;
+      });
+    return html.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+  }).join("");
+}
+
+function renderHits(hits) {
+  return hits.map((h, i) => {
+    const lines = h.text.split("\n").map((line, j) =>
+      `<span class="ln">${h.start_line + j}</span>${esc(line)}`).join("\n");
+    const ranks = [h.lexical_rank && `bm25 #${h.lexical_rank}`, h.dense_rank && `dense #${h.dense_rank}`]
+      .filter(Boolean).join(" · ");
+    return `<div class="card hit" id="hit-${i}" data-path="${esc(h.path)}" data-start="${h.start_line}" data-end="${h.end_line}">
+      <div class="hit-head"><span class="loc">${esc(h.location)}</span>
+      <span class="sym">${esc(h.symbol || "module level")} ${ranks ? "· " + ranks : ""}</span></div>
+      <pre>${lines}</pre></div>`;
+  }).join("");
+}
+
+function wireCitations() {
+  document.querySelectorAll(".cite[data-path]").forEach((btn) => btn.addEventListener("click", () => {
+    const line = +btn.dataset.line;
+    const card = [...document.querySelectorAll(".hit")].find((c) =>
+      c.dataset.path === btn.dataset.path && line >= +c.dataset.start && line <= +c.dataset.end);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.add("flash");
+    setTimeout(() => card.classList.remove("flash"), 1400);
+  }));
+}
+
+function params() {
+  return { question: $("question").value.trim(), mode: $("mode").value, k: +$("k").value,
+           filter: $("filter").value.trim() || null };
+}
+
+function busy(on) { $("ask").disabled = on; $("search").disabled = on; }
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const p = params();
+  if (!p.question) return;
+  busy(true);
+  $("out").innerHTML = `<div class="card muted">Retrieving code and asking the model…</div>`;
+  try {
+    const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" },
+                                         body: JSON.stringify(p) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    const bad = data.citations.filter((c) => !c.supported).length;
+    $("out").innerHTML =
+      `<div class="card answer">${renderMarkdown(data.answer, data.citations)}</div>` +
+      `<p class="muted">${data.citations.length} citations` +
+      (bad ? `, <span class="error">${bad} not found in the retrieved code</span>` : ", all found in the retrieved code") +
+      `</p><h2>Code the model was shown</h2>${renderHits(data.hits)}`;
+    wireCitations();
+  } catch (err) {
+    $("out").innerHTML = `<div class="card error">${esc(String(err.message || err))}</div>`;
+  } finally { busy(false); }
+});
+
+$("search").addEventListener("click", async () => {
+  const p = params();
+  if (!p.question) return;
+  busy(true);
+  try {
+    const q = new URLSearchParams({ q: p.question, k: p.k, mode: p.mode });
+    if (p.filter) q.set("filter", p.filter);
+    const data = await (await fetch(`/api/search?${q}`)).json();
+    $("out").innerHTML = `<h2>Matching code</h2>${renderHits(data.hits || [])}`;
+  } catch (err) {
+    $("out").innerHTML = `<div class="card error">${esc(String(err))}</div>`;
+  } finally { busy(false); }
+});
+
+loadStats();
+</script>
+</body>
+</html>
